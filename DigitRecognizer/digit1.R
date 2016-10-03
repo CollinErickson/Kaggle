@@ -29,9 +29,9 @@ rm(fit)
 
 
 library(nnet)
-fitlog <- multinom(factor(label) ~ ., data=train, MaxNWts=1e6)
+fitlog <- multinom(factor(label) ~ ., data=train, MaxNWts=1e6, maxit=200)
 str(fitlog)
-predlog <- predict(fitlog, test)
+predlog <- predict(fitlog, testALL)
 
 table(predlog, test$label)
 sum(predlog == test$label) / length(predlog) 
@@ -39,10 +39,16 @@ sum(predlog == test$label) / length(predlog)
 # 86.7% accurate using all on training
 
 
+outDF <- data.frame(ImageId=1:length(predlog), Label=predlog)
+write.csv(x=outDF, file="DigitRecognizer/multinomSUBMISSION.csv", row.names = F)
+head(read.csv("DigitRecognizer/multinomSUBMISSION.csv"))
 
 fitnet <- nnet(factor(label) ~ ., data=train, MaxNWts=1e6, maxit=200,size=20)
-str(fitlog)
-predlog <- predict(fitlog, test)
+str(fitnet)
+prednet <- predict(fitnet, test) # probabilities
+prednet2 <- apply(prednet, 1, which.max) - 1
 
-table(predlog, test$label)
-sum(predlog == test$label) / length(predlog) 
+table(prednet2, test$label)
+sum(prednet2 == test$label) / length(prednet2) 
+# 83.2% with maxit=200 and size=20
+
