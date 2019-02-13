@@ -47,6 +47,13 @@ Temporary Items
 .apdisk
 .Rproj.user
 
+# Git stuff to ignore
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+
+
 # Data files to ignore
 Earthquake/*.csv
 Earthquake/test/*.csv

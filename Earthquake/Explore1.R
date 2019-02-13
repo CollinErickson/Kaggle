@@ -12,3 +12,7 @@ plot(train1)
 train1 %>% summary
 train1$time_to_failure %>% unique %>% sort
 (train1$time_to_failure - mean(train1$time_to_failure)) %>% sort
+
+test1 <- read.csv(paste0(folderpath, "test/seg_00030f.csv"), nrows=10000)
+test1 %>% str
+test1 %>% summary
