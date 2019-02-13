@@ -49,6 +49,8 @@ Temporary Items
 
 # Git stuff to ignore
 .Rproj.user
+.Rproj.user/*
+.Rproj.user/*/pcs/*
 .Rhistory
 .RData
 .Ruserdata
