@@ -46,3 +46,12 @@ Network Trash Folder
 Temporary Items
 .apdisk
 .Rproj.user
+
+# Data files to ignore
+Earthquake/*.csv
+Earthquake/test/*.csv
+Earthquake/test.zip
+Earthquake/train.csv.zip
+LeafClassification/images/*.jpg
+LeafClassification/*.csv
+DigitRecognizer/*
