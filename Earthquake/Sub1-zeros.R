@@ -52,4 +52,7 @@ system.time(tmpdf <- read.csv(paste0(folderpath,"train.csv"), skip = 10000, nrow
 system.time(tmpdf <- read.csv(paste0(folderpath,"train.csv"), skip = 100000, nrows = 100, header=FALSE))
 system.time(tmpdf <- read.csv(paste0(folderpath,"train.csv"), skip = 1000000, nrows = 100, header=FALSE))
 system.time(tmpdf <- read.csv(paste0(folderpath,"train.csv"), skip = 10000000, nrows = 100, header=FALSE))
-system.time(tmpdf <- readr::read_csv(paste0(folderpath,"train.csv"), skip = 10000000, n_max = 100))
+system.time(tmpdf <- readr::read_csv(paste0(folderpath,"train.csv"), skip = 1e7, n_max = 100))
+system.time(tmpdf2 <- data.table::fread(paste0(folderpath,"train.csv"), nrows = 100, skip = 1e7, header = F))
+system.time(tmpdf <- readr::read_csv(paste0(folderpath,"train.csv"), skip = 1e8, n_max = 100))
+system.time(tmpdf2 <- data.table::fread(paste0(folderpath,"train.csv"), skip = 1e8, nrows=100, header = F))

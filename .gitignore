@@ -58,6 +58,7 @@ Temporary Items
 
 # Data files to ignore
 Earthquake/*.csv
+Earthquake/train/*.csv
 Earthquake/test/*.csv
 Earthquake/test.zip
 Earthquake/train.csv.zip
