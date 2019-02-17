@@ -94,22 +94,24 @@ plot(te1$meantime, pr.svm0te);abline(a=0,b=1,col=2)
 # cost=.33 3.102509 9.625562 1.985088 0.5033424 0.5390941 0.2790128
 # Cost=3.3 3.073417 9.445889 1.956679 0.5103454 0.5513384 0.2924708
 # Use other gamma
+# gamma=1    3.222722 10.38594 2.074222 0.4870285 0.4986615 0.2227105
+# gamma=1/60 3.151739 9.933457 2.018955 0.4968964 0.5222203 0.2565743
 
 
-svm2 <- e1071::svm(meantime ~ meanacoustic + sdacoustic + rangeacoustic + I(sdacoustic/rangeacoustic), data=tr1)
-pr.svm2tr <- predict(svm2, tr1, se=T)
-SGGP::valstats(pr.svm2tr, rep(1,nrow(tr1)), tr1$meantime)
-pr.svm2te <- predict(svm2, te1, se=T)
-SGGP::valstats(pr.svm2te, rep(1,nrow(te1)), te1$meantime)
-plot(te1$meantime, pr.svm2te);abline(a=0,b=1,col=2)
-
-
-svm3 <- e1071::svm(meantime ~ meanacoustic + sdacoustic + rangeacoustic + I(sdacoustic/rangeacoustic) + I(meanacoustic/sdacoustic), data=tr1)
-pr.svm3tr <- predict(svm3, tr1, se=T)
-SGGP::valstats(pr.svm3tr, rep(1,nrow(tr1)), tr1$meantime)
-pr.svm3te <- predict(svm3, te1, se=T)
-SGGP::valstats(pr.svm3te, rep(1,nrow(te1)), te1$meantime)
-plot(te1$meantime, pr.svm3te);abline(a=0,b=1,col=2)
+# svm2 <- e1071::svm(meantime ~ meanacoustic + sdacoustic + rangeacoustic + I(sdacoustic/rangeacoustic), data=tr1)
+# pr.svm2tr <- predict(svm2, tr1, se=T)
+# SGGP::valstats(pr.svm2tr, rep(1,nrow(tr1)), tr1$meantime)
+# pr.svm2te <- predict(svm2, te1, se=T)
+# SGGP::valstats(pr.svm2te, rep(1,nrow(te1)), te1$meantime)
+# plot(te1$meantime, pr.svm2te);abline(a=0,b=1,col=2)
+# 
+# 
+# svm3 <- e1071::svm(meantime ~ meanacoustic + sdacoustic + rangeacoustic + I(sdacoustic/rangeacoustic) + I(meanacoustic/sdacoustic), data=tr1)
+# pr.svm3tr <- predict(svm3, tr1, se=T)
+# SGGP::valstats(pr.svm3tr, rep(1,nrow(tr1)), tr1$meantime)
+# pr.svm3te <- predict(svm3, te1, se=T)
+# SGGP::valstats(pr.svm3te, rep(1,nrow(te1)), te1$meantime)
+# plot(te1$meantime, pr.svm3te);abline(a=0,b=1,col=2)
 
 getDmatrix1 <- function(x) {
   # xgboost::xgb.DMatrix(cbind(x$meanacoustic, x$sdacoustic, x$rangeacoustic, x$sdacoustic/x$rangeacoustic + x$meanacoustic/x$sdacoustic), label=x$meantime)
@@ -139,11 +141,12 @@ te1[te1$meantime<1 & pr.rf1te > 11,]
 
 
 
+
 # Make predictions for submission
 # Sub5-svm was made with svm0, all features from file
 if (F) {
   testfolderpath <- paste0(folderpath, "test/")
-  testsubmissionpath <- paste0(folderpath,"Sub6-svmrf.csv")
+  testsubmissionpath <- paste0(folderpath,"Sub6-svmrf??.csv")
   if (file.exists(testsubmissionpath)) {stop("File already exists")}
   cat(file=testsubmissionpath, "seg_id,time_to_failure\n")
   i <- 0
@@ -188,3 +191,133 @@ if (F) {
     # stop()
   }
 }
+
+
+
+
+
+
+
+# I did it wrong, training size was 15k, testing are 150k.
+# What if I predict ten times on testing?
+allpreds <- rep(0,10)
+for (iii in 1:10) {
+  testdfi <- testdf[1:15000 + 15000*(iii-1),, drop=F]
+  test.abszi <- abs(testdfi$V1 - mean(testdfi$V1)) / sd(testdfi$V1)
+  testdf.featuresi <- data.frame(meanacoustic=mean(testdfi$V1),
+                                minacoustic=min(testdfi$V1),
+                                maxacoustic=max(testdfi$V1),
+                                sdacoustic=sd(testdfi$V1),
+                                q25=quantile(test.abszi, .25),
+                                q50=quantile(test.abszi, .5),
+                                q75=quantile(test.abszi, .75),
+                                q90=quantile(test.abszi, .90),
+                                q95=quantile(test.abszi, .95),
+                                q99=quantile(test.abszi, .99),
+                                q999=quantile(test.abszi, .999),
+                                q1=quantile(test.abszi, 1),
+                                p1=sum(test.abszi>1)/nrow(testdfi),
+                                p3=sum(test.abszi>3)/nrow(testdfi),
+                                p10=sum(test.abszi>10)/nrow(testdfi),
+                                rangeacoustic=max(testdfi$V1)-min(testdfi$V1)
+  )
+  
+  
+  # Normalize if needed
+  if (TRUE) {
+    if (any(colnames(testdf.featuresi) != colnames(gdf2.norm)[-1])) {stop("Names don't match")}
+    testdf.featuresi <- sweep(sweep(testdf.featuresi,2,gdf2.colmeans[-1]), 2, gdf2.colsd[-1], `/`)
+  }
+  
+  allpreds[iii] <- (predict(svm0, testdf.featuresi))
+}
+# 7.389 avg for groups with range from 5.8 to 8.9, full group was 7.21. Significant difference
+
+# Do predictions again with this
+# Make predictions for submission
+# Sub5-svm was made with svm0, all features from file
+if (F) {
+  testfolderpath <- paste0(folderpath, "test/")
+  testsubmissionpath <- paste0(folderpath,"Sub7-svmagg.csv")
+  if (file.exists(testsubmissionpath)) {stop("File already exists")}
+  cat(file=testsubmissionpath, "seg_id,time_to_failure\n")
+  i <- 0
+  for (testfile in list.files(testfolderpath)) {
+    i <- i+1; #cat(i, testfile, "\n")
+    testdf <- read.csv(paste0(testfolderpath, testfile))
+    names(testdf) <- "V1"
+    
+    # I did it wrong, training size was 15k, testing are 150k.
+    # What if I predict ten times on testing?
+    allpreds <- rep(0,10)
+    for (iii in 1:10) {
+      testdfi <- testdf[1:15000 + 15000*(iii-1),, drop=F]
+      test.abszi <- abs(testdfi$V1 - mean(testdfi$V1)) / sd(testdfi$V1)
+      testdf.featuresi <- data.frame(meanacoustic=mean(testdfi$V1),
+                                     minacoustic=min(testdfi$V1),
+                                     maxacoustic=max(testdfi$V1),
+                                     sdacoustic=sd(testdfi$V1),
+                                     q25=quantile(test.abszi, .25),
+                                     q50=quantile(test.abszi, .5),
+                                     q75=quantile(test.abszi, .75),
+                                     q90=quantile(test.abszi, .90),
+                                     q95=quantile(test.abszi, .95),
+                                     q99=quantile(test.abszi, .99),
+                                     q999=quantile(test.abszi, .999),
+                                     q1=quantile(test.abszi, 1),
+                                     p1=sum(test.abszi>1)/nrow(testdfi),
+                                     p3=sum(test.abszi>3)/nrow(testdfi),
+                                     p10=sum(test.abszi>10)/nrow(testdfi),
+                                     rangeacoustic=max(testdfi$V1)-min(testdfi$V1)
+      )
+      
+      
+      # Normalize if needed
+      if (TRUE) {
+        if (any(colnames(testdf.featuresi) != colnames(gdf2.norm)[-1])) {stop("Names don't match")}
+        testdf.featuresi <- sweep(sweep(testdf.featuresi,2,gdf2.colmeans[-1]), 2, gdf2.colsd[-1], `/`)
+      }
+      prediii <- predict(svm0, testdf.featuresi)
+      prediii <- pmax( 0.05, prediii)
+      prediii <- pmin(16, prediii)
+      allpreds[iii] <- prediii
+    }
+    testpred.svm0 <- mean(allpreds)
+    # Some preds are negative, make them zero. Highest is 16.1
+    testpred.svm0 <- pmax( 0.05, testpred.svm0)
+    testpred.svm0 <- pmin(16, testpred.svm0)
+    # testpred <- (testpred.svm0 + testpred.rf1) / 2
+    
+    
+    # Get old prediction using all data to check the difference
+    test.absz <- abs(testdf$V1 - mean(testdf$V1)) / sd(testdf$V1)
+    testdf.features <- data.frame(meanacoustic=mean(testdf$V1),
+                                  minacoustic=min(testdf$V1),
+                                  maxacoustic=max(testdf$V1),
+                                  sdacoustic=sd(testdf$V1),
+                                  q25=quantile(test.absz, .25),
+                                  q50=quantile(test.absz, .5),
+                                  q75=quantile(test.absz, .75),
+                                  q90=quantile(test.absz, .90),
+                                  q95=quantile(test.absz, .95),
+                                  q99=quantile(test.absz, .99),
+                                  q999=quantile(test.absz, .999),
+                                  q1=quantile(test.absz, 1),
+                                  p1=sum(test.absz>1)/nrow(testdf),
+                                  p3=sum(test.absz>3)/nrow(testdf),
+                                  p10=sum(test.absz>10)/nrow(testdf),
+                                  rangeacoustic=max(testdf$V1)-min(testdf$V1)
+    )
+    # Normalize if needed
+    if (TRUE) {
+      if (any(colnames(testdf.features) != colnames(gdf2.norm)[-1])) {stop("Names don't match")}
+      testdf.features <- sweep(sweep(testdf.features,2,gdf2.colmeans[-1]), 2, gdf2.colsd[-1], `/`)
+    }
+    testpred.svm0BAD <- predict(svm0, testdf.features)
+    testfile_nocsv <- strsplit(testfile, ".csv")[[1]]
+    cat(i, testfile, round(c(testpred.svm0BAD, mean(allpreds),sd(allpreds)),2), "\n")
+    cat(paste0(testfile_nocsv, ",", (testpred.svm0), "\n"), file=testsubmissionpath, sep = "",append=TRUE)
+    # stop()
+  }
+}
+

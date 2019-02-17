@@ -1,3 +1,6 @@
+# These are group by time, so size 4096.
+# Only getting a couple of features.
+
 folderpath <- "./Earthquake/"
 
 nlines <- 629145481

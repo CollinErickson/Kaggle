@@ -1,3 +1,7 @@
+# These are groups of size 15000 b/c I thought it was the size of testing.
+# But those are actually of size 150,000, so I was way off.
+# But then these aren't all from the same time group, so it is bad.
+
 folderpath <- "./Earthquake/"
 
 nlines <- 629145481
