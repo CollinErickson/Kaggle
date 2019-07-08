@@ -3,19 +3,20 @@
 # Uses Nskip to get 10x data.
 # Want to run in parallel
 
-folderpath <- "./Earthquake/"
+# folderpath <- "./Earthquake/"
+folderpath <- "~/scratch/earthquake/"
 
 library(foreach)
-# library(doParallel)
+library(doParallel)
 
-# registerDoParallel(2)
+registerDoParallel(32)
 
 # nlines <- 629145481
-filemap <- apply(expand.grid(letters, letters[1:3])[,c(2,1)], 1, function(x) paste0(x,collapse=''))[1:63]
 
 # if (file.exists(savegroupinfofilepath)) {stop("file exists")}
-foreach (i.file = 35:63) %do% {
+foreach (i.file = 1:63) %do% {
   
+  filemap <- apply(expand.grid(letters, letters[1:3])[,c(2,1)], 1, function(x) paste0(x,collapse=''))[1:63]
   
   extract_chunk_acoustic_features <- function(x) {
     if (length(x) != 150000) {stop("x is wrong length")}
@@ -94,6 +95,7 @@ foreach (i.file = 35:63) %do% {
       mean(traini_chunk$time_to_failure),
       min( traini_chunk$time_to_failure),
       max( traini_chunk$time_to_failure),
+      tail(traini_chunk$time_to_failure, 1), # Need time to next failure, won't be min anymore
       extract_chunk_acoustic_features(traini_chunk$acoustic_data)
     )
     # Write to file
