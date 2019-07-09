@@ -6,18 +6,27 @@
 library(magrittr)
 folderpath <- "./Earthquake/"
 
-filemap <- apply(expand.grid(letters, letters[1:3])[,c(2,1)], 1, function(x) paste0(x,collapse=''))[1:63]
-groupinfofilepath <- paste0(folderpath,"GroupInfo6.csv")
-gdfbad <- read.csv(groupinfofilepath, header = F)
-gdf <- gdfbad[gdfbad[,1] != "",]
-gdf <- matrix(as.double(as.matrix(gdf)), ncol=67)
-gdf <- gdf[as.numeric(gdf[,1]) < 64,]
-apply(gdf, 1, function(xx) any(is.na(xx))) %>% table
-gdf <- gdf[!apply(gdf, 1, function(xx) any(is.na(xx))),]
-gdf %>% head
-gdf <- as.data.frame(gdf)
+# filemap <- apply(expand.grid(letters, letters[1:3])[,c(2,1)], 1, function(x) paste0(x,collapse=''))[1:63]
+gdf <- NULL
+for (ifile in 1:63) {
+  
+  groupinfofilepathi <- paste0(folderpath,"GroupInfo6sep/GroupInfo6-",ifile,".csv")
+  if (file.exists(groupinfofilepathi)) {
+    gdf <- rbind(gdf,
+                 read.csv(groupinfofilepathi, header=F))
+  }
+}
+# groupinfofilepath <- paste0(folderpath,"GroupInfo6.csv")
+# gdfbad <- read.csv(groupinfofilepath, header = F)
+# gdf <- gdfbad[gdfbad[,1] != "",]
+# gdf <- matrix(as.double(as.matrix(gdf)), ncol=67)
+# gdf <- gdf[as.numeric(gdf[,1]) < 64,]
+# apply(gdf, 1, function(xx) any(is.na(xx))) %>% table
+# gdf <- gdf[!apply(gdf, 1, function(xx) any(is.na(xx))),]
+# gdf %>% head
+# gdf <- as.data.frame(gdf)
 colnames(gdf) <- c("i.file", "startrow", "endrow",
-                   "meantime","mintime","maxtime",
+                   "meantime","mintime","maxtime","tailtime",
                    "meanacoustic","minacoustic","maxacoustic","sdacoustic",
                    "xq001","xq01","xq05","xq25", "xq50","xq75", "xq90", "xq95","xq99","xq999",
                    "q25", "q50","q75", "q90", "q95","q99","q999","q1",
@@ -35,33 +44,34 @@ colnames(gdf) <- c("i.file", "startrow", "endrow",
 gdf %>% head
 gdf %>% str()
 gdf %>% summary
-plot(gdf$meanacoustic, gdf$mintime)
-plot(gdf$sdacoustic, gdf$mintime)
-summary(lm(mintime ~ meanacoustic, gdf))$r.sq
-summary(lm(mintime ~ meanacoustic + sdacoustic, gdf))$r.sq
-summary(lm(mintime ~ sdacoustic, gdf))$r.sq
+plot(gdf$meanacoustic, gdf$tailtime)
+plot(gdf$sdacoustic, gdf$tailtime)
+summary(lm(tailtime ~ meanacoustic, gdf))$r.sq
+summary(lm(tailtime ~ meanacoustic + sdacoustic, gdf))$r.sq
+summary(lm(tailtime ~ sdacoustic, gdf))$r.sq
 
 gdf$minacoustic %>% is.infinite() %>% table
 gdf$maxacoustic %>% is.infinite() %>% table
 gdf[(gdf$maxacoustic %>% is.infinite()),]
 
 # Remove bad rows, remove unneeded columns
-gdf2 <- gdf[!(gdf$maxacoustic %>% is.infinite()), -c(1,2,3,4,6)]
+# gdf2 <- gdf[!(gdf$maxacoustic %>% is.infinite()), -c(1,2,3,4,6)]
+gdf2 <- gdf[, -c(1,2,3,4,5,6)]
 gdf2$rangeacoustic <- gdf2$maxacoustic - gdf2$minacoustic
 
-summary(lm(mintime ~ meanacoustic + sdacoustic, gdf2))$r.sq
-plot(gdf2$rangeacoustic, gdf2$mintime)
-plot(gdf2$sdacoustic / gdf2$rangeacoustic, gdf2$mintime)
-summary(lm(mintime ~ meanacoustic + sdacoustic + rangeacoustic, gdf2))$r.sq
+summary(lm(tailtime ~ meanacoustic + sdacoustic, gdf2))$r.sq
+plot(gdf2$rangeacoustic, gdf2$tailtime)
+plot(gdf2$sdacoustic / gdf2$rangeacoustic, gdf2$tailtime)
+summary(lm(tailtime ~ meanacoustic + sdacoustic + rangeacoustic, gdf2))$r.sq
 gdf2.colmeans <- colMeans(gdf2)
 gdf2.colsd <- apply(gdf2, 2, sd)
-gdf2.norm <- cbind(mintime=gdf2[,1], # Don't normalize first column
+gdf2.norm <- cbind(tailtime=gdf2[,1], # Don't normalize first column
                    sweep(sweep(gdf2[,-1],2,gdf2.colmeans[-1]), 2, gdf2.colsd[-1], `/`)
 )
 gdf2.norm %>% summary
 
-lm3 <- lm(mintime ~ meanacoustic + sdacoustic + rangeacoustic, gdf2)
-SGGP::valstats(predict(lm3, gdf2), rep(0,nrow(gdf2)), gdf2$mintime)
+lm3 <- lm(tailtime ~ meanacoustic + sdacoustic + rangeacoustic, gdf2)
+SGGP::valstats(predict(lm3, gdf2), rep(0,nrow(gdf2)), gdf2$tailtime)
 
 # Now need to break up by top and bottom since they overlap.
 # tr.inds <- sample(1:nrow(gdf2), floor(.7*nrow(gdf2)))
@@ -71,88 +81,117 @@ tr.inds <- 1:floor(.7*nrow(gdf2))#sample(1:nrow(gdf2), floor(.7*nrow(gdf2)))
 tr1 <- gdf2.norm[tr.inds,]
 te1 <- gdf2.norm[-tr.inds,]
 
-lm0 <- lm(mintime ~ 1, tr1)
+lm0 <- lm(tailtime ~ 1, tr1)
 summary(lm0)$r.sq
 pr0tr <- predict(lm0, tr1, se=T)
-SGGP::valstats(pr0tr$fit, pr0tr$se.fit, tr1$mintime)
+SGGP::valstats(pr0tr$fit, pr0tr$se.fit, tr1$tailtime)
 pr0te <- predict(lm0, te1, se=T)
-SGGP::valstats(pr0te$fit, pr0te$se.fit, te1$mintime)
+SGGP::valstats(pr0te$fit, pr0te$se.fit, te1$tailtime)
 
-lm1 <- lm(mintime ~ meanacoustic + sdacoustic + rangeacoustic, tr1)
+lm1 <- lm(tailtime ~ meanacoustic + sdacoustic + rangeacoustic, tr1)
 summary(lm1)$r.sq
 pr1tr <- predict(lm1, tr1, se=T)
-SGGP::valstats(pr1tr$fit, pr1tr$se.fit, tr1$mintime)
+SGGP::valstats(pr1tr$fit, pr1tr$se.fit, tr1$tailtime)
 pr1te <- predict(lm1, te1, se=T)
-SGGP::valstats(pr1te$fit, pr1te$se.fit, te1$mintime)
+SGGP::valstats(pr1te$fit, pr1te$se.fit, te1$tailtime)
 # 3.601297 377.2254 2.874454 0.07921543 0.1945212 0.03779928
 
-lm2 <- lm(mintime ~ ., tr1)
+lm2 <- lm(tailtime ~ ., tr1)
 summary(lm2)$r.sq
 pr2tr <- predict(lm2, tr1, se=T)
-SGGP::valstats(pr2tr$fit, pr2tr$se.fit, tr1$mintime)
+SGGP::valstats(pr2tr$fit, pr2tr$se.fit, tr1$tailtime)
 pr2te <- predict(lm2, te1, se=T)
-SGGP::valstats(pr2te$fit, pr2te$se.fit, te1$mintime)
+SGGP::valstats(pr2te$fit, pr2te$se.fit, te1$tailtime)
 # 3.476074 156.6094 2.693818 0.1301474 0.3224003 0.1035505
 
-svm1 <- e1071::svm(mintime ~ meanacoustic + sdacoustic + rangeacoustic, data=tr1)
+svm1 <- e1071::svm(tailtime ~ meanacoustic + sdacoustic + rangeacoustic, data=tr1)
 pr.svm1tr <- predict(svm1, tr1, se=T)
-SGGP::valstats(pr.svm1tr, rep(1,nrow(tr1)), tr1$mintime)
+SGGP::valstats(pr.svm1tr, rep(1,nrow(tr1)), tr1$tailtime, metrics=list(MAE=function(a,b,c) {mean(abs(a-c))}))
 pr.svm1te <- predict(svm1, te1, se=T)
-SGGP::valstats(pr.svm1te, rep(1,nrow(te1)), te1$mintime)
-qplot(te1$mintime, pr.svm1te)
+SGGP::valstats(pr.svm1te, rep(1,nrow(te1)), te1$tailtime, metrics=list(MAE=function(a,b,c) {mean(abs(a-c))}))
+plot(te1$tailtime, pr.svm1te); abline(a=0,b=1,col=2)
+plot(te1$tailtime - pr.svm1te)
 #  RMSE    score CRPscore  coverage      corr        R2
 #  2.895254 8.382498 1.813076 0.5560032 0.5926002 0.3471446
 
 
-svm0 <- e1071::svm(mintime ~ ., data=tr1, cost=.1)
+svm0 <- e1071::svm(tailtime ~ ., data=tr1, cost=.1);svm0
 pr.svm0tr <- predict(svm0, tr1, se=T)
-SGGP::valstats(pr.svm0tr, rep(1,nrow(tr1)), tr1$mintime, metrics=list(MAE=function(a,b,c) {mean(abs(a-c))}))
+SGGP::valstats(pr.svm0tr, rep(1,nrow(tr1)), tr1$tailtime, metrics=list(MAE=function(a,b,c) {mean(abs(a-c))}))
 pr.svm0te <- predict(svm0, te1, se=T)
-SGGP::valstats(pr.svm0te, rep(1,nrow(te1)), te1$mintime, metrics=list(MAE=function(a,b,c) {mean(abs(a-c))}))
-plot(te1$mintime, pr.svm0te);abline(a=0,b=1,col=2)
+SGGP::valstats(pr.svm0te, rep(1,nrow(te1)), te1$tailtime, metrics=list(MAE=function(a,b,c) {mean(abs(a-c))}))
+plot(te1$tailtime, pr.svm0te);abline(a=0,b=1,col=2)
 # cost=.01 2.85107 8.1286 1.768534 0.5753425 0.6282235 0.3669189 2.160966
 # cost=.033 2.726871 7.435826 1.670609 0.6051571 0.6490534 0.4208744 2.069176
 # cost=.1 2.7092 7.339763 1.666704 0.5954875 0.6593492 0.428356 2.079357
 # cost=.33 2.788616 7.776377 1.741292 0.5479452 0.6543015 0.3943512 2.160933
 # cost=1  2.978707 8.872695 1.887783 0.5173247 0.636559 0.3089665 2.313039
+#CURRENT cost=.1 2.919019 8.520674 1.832155 0.535869 0.6491091 0.3371954 2.251624
 
 # Refit svm with all data using best parameters
-svm0all <- e1071::svm(mintime ~ ., data=gdf2.norm, cost=.1)
+svm0all <- e1071::svm(tailtime ~ ., data=gdf2.norm, cost=.1)
+
+# SVM groups by 15
+svmg1.allpreds <- matrix(NaN, nrow(te1), 15)
+svmg1.mods <- list
+for (i in 1:15) {
+  print(i)
+  tr.i <- tr1[((1:nrow(tr1))%%15)==0,]
+  svmi <- e1071::svm(tailtime ~ ., data=tr.i, cost=.1)
+  svmg1.mods[[i]] <- svmi
+  predi.svmg1 <- predict(svmi, te1)
+  svmg1.allpreds[,i] <- predi.svmg1
+}
+SGGP::valstats(rowMeans(allpreds), apply(allpreds, 1, var), te1$tailtime, metrics=list(MAE=function(a,b,c) {mean(abs(a-c))}))
+plot(te1$tailtime, rowMeans(allpreds)); abline(a=0,b=1,col=2)
+plot(te1$tailtime); points(rowMeans(allpreds), col=2)
+# 2.706694   NaN      NaN        0 0.6570911 0.4301116 2.056747
+
+
+# SVM groups by 15 ALL, train 15 models and save them
+svmg1ALL.mods <- list()
+for (i in 1:15) {
+  print(i)
+  gd2n.i <- gdf2.norm[((1:nrow(gdf2.norm))%%15)==(i-1),]
+  svmi <- e1071::svm(tailtime ~ ., data=gd2n.i, cost=.1)
+  svmg1ALL.mods[[i]] <- svmi
+}
 
 
 getDmatrix1 <- function(x) {
-  xgboost::xgb.DMatrix(as.matrix(x[,-1]), label=x$mintime)
+  xgboost::xgb.DMatrix(as.matrix(x[,-1]), label=x$tailtime)
 }
 xgb1 <- xgboost::xgb.train(data=getDmatrix1(tr1), nrounds = 100)
 pr.xgb1tr <- predict(xgb1, getDmatrix1(tr1), se=T)
-SGGP::valstats(pr.xgb1tr, rep(1,nrow(tr1)), tr1$mintime)
+SGGP::valstats(pr.xgb1tr, rep(1,nrow(tr1)), tr1$tailtime)
 pr.xgb1te <- predict(xgb1, getDmatrix1(te1), se=T)
-SGGP::valstats(pr.xgb1te, rep(1,nrow(te1)), te1$mintime)
-plot(te1$mintime, pr.xgb1te);abline(a=0,b=1,col=2)
+SGGP::valstats(pr.xgb1te, rep(1,nrow(te1)), te1$tailtime)
+plot(te1$tailtime, pr.xgb1te);abline(a=0,b=1,col=2)
 # nrounds=100  3.116251 9.71102 1.987122 0.4979855 0.5789453 0.2436751
 # nrounds=300  3.120151 9.735343 1.990623 0.5012087 0.5783889 0.2417807
 # nrounds=1000 3.120184 9.735545  1.99066 0.5004029 0.5783675 0.2417649
 
-rf1 <- randomForest::randomForest(mintime ~ ., data=tr1)
+rf1 <- randomForest::randomForest(tailtime ~ ., data=tr1)
 pr.rf1tr <- predict(rf1, tr1, se=T)
-SGGP::valstats(pr.rf1tr, rep(1,nrow(tr1)), tr1$mintime, metrics=list(MAE=function(a,b,c) {mean(abs(a-c))}))
+SGGP::valstats(pr.rf1tr, rep(1,nrow(tr1)), tr1$tailtime, metrics=list(MAE=function(a,b,c) {mean(abs(a-c))}))
 pr.rf1te <- predict(rf1, te1, se=T)
-SGGP::valstats(pr.rf1te, rep(1,nrow(te1)), te1$mintime, metrics=list(MAE=function(a,b,c) {mean(abs(a-c))}))
-plot(te1$mintime, pr.rf1te);abline(a=0,b=1,col=2)
+SGGP::valstats(pr.rf1te, rep(1,nrow(te1)), te1$tailtime, metrics=list(MAE=function(a,b,c) {mean(abs(a-c))}))
+plot(te1$tailtime, pr.rf1te);abline(a=0,b=1,col=2)
+plot(te1$tailtime); points(pr.rf1te, col=2)
 # 2.822191 7.96476  1.80102 0.524577 0.6495069 0.3796793 2.239409
 
 # Combine models, get minor improvement
 plot(pr.rf1te, pr.svm0te)
-SGGP::valstats((pr.rf1te+pr.svm0te)/2, rep(1,nrow(te1)), te1$mintime, metrics=list(MAE=function(a,b,c) {mean(abs(a-c))}))
+SGGP::valstats((pr.rf1te+pr.svm0te)/2, rep(1,nrow(te1)), te1$tailtime, metrics=list(MAE=function(a,b,c) {mean(abs(a-c))}))
 # 2.717134 7.382815 1.701914 0.5656728 0.6635988 0.4250031 2.130311
-SGGP::valstats((pr.rf1te*.5+1.5*pr.svm0te)/2, rep(1,nrow(te1)), te1$mintime, metrics=list(MAE=function(a,b,c) {mean(abs(a-c))}))
+SGGP::valstats((pr.rf1te*.5+1.5*pr.svm0te)/2, rep(1,nrow(te1)), te1$tailtime, metrics=list(MAE=function(a,b,c) {mean(abs(a-c))}))
 #  2.700727 7.293927 1.673639 0.5850121 0.6641254 0.4319259 2.095629
 
 # Fit RF with all data
-rf1all <- randomForest::randomForest(mintime ~ ., data=gdf2.norm)
+rf1all <- randomForest::randomForest(tailtime ~ ., data=gdf2.norm)
 
 # Look at worst predictions. Go back for ideas on new features
-te1[te1$mintime<1 & pr.rf1te > 11,]
+te1[te1$tailtime<1 & pr.rf1te > 11,]
 
 
 
@@ -164,7 +203,7 @@ te1[te1$mintime<1 & pr.rf1te > 11,]
 # Sub5-svm was made with svm0, all features from file
 if (F) {
   testfolderpath <- paste0(folderpath, "test/")
-  testsubmissionpath <- paste0(folderpath,"Sub11-svm.csv")
+  testsubmissionpath <- paste0(folderpath,"Sub13-svm.csv")
   if (file.exists(testsubmissionpath)) {stop("File already exists")}
   cat(file=testsubmissionpath, "seg_id,time_to_failure\n")
   i <- 0
@@ -257,12 +296,21 @@ if (F) {
       if (is.null(colnames(testdf.features)) || any(colnames(testdf.features) != colnames(gdf2.norm)[-1])) {stop("Names don't match")}
       testdf.features <- sweep(sweep(testdf.features,2,gdf2.colmeans[-1]), 2, gdf2.colsd[-1], `/`)
     }
-    testpred.svm0 <- predict(svm0all, testdf.features)
+    # Now predict over groups
+    testpred.svmG1.all <- rep(NaN, 15)
+    modnumstouse <- 1:15 #sample(1:15, 15)
+    for (imod in 1:15) {
+      testpred.svmG1.all[imod] <- predict(svmg1ALL.mods[[modnumstouse[imod]]], testdf.features)
+    }
+    
+    # testpred.svm0 <- predict(svm0all, testdf.features)
+    
     # testpred.rf1 <- predict(rf1all, testdf.features)
     testfile_nocsv <- strsplit(testfile, ".csv")[[1]]
     # cat(i, testfile, round(c(mean(allpreds.svm),sd(allpreds.svm)),2), "\n")
-    testpred.final <- testpred.svm0 #(testpred.svm0 + testpred.rf1) / 2
-    cat(i, testfile, round(c(testpred.svm0,  testpred.final),2), "\n", sep="\t")
+    # testpred.final <- testpred.svm0 #(testpred.svm0 + testpred.rf1) / 2
+    testpred.final <- mean(testpred.svmG1.all)
+    cat(i, testfile, round(c(testpred.final, sd(testpred.svmG1.all)),2), "\n", sep="\t")
     cat(paste0(testfile_nocsv, ",", (testpred.final), "\n"), file=testsubmissionpath, sep = "",append=TRUE)
     # stop()
   }

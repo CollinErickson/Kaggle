@@ -17,7 +17,7 @@ N <- 10000
 mses <- numeric(N)
 for (i in 1:N) {
   tr.rows <- sample(1:nrow(tr1), 128) #2895 +0*128*4*2*4)
-  batchx <- as.matrix(tr1[tr.rows,-1]) + 
+  batchx <- as.matrix(tr1[tr.rows,-1])
   batchy <- as.matrix(tr1[tr.rows,1, drop=F])
   if (i %% 50 == 0) {
     train_mse <- mse$eval(feed_dict = dict(
