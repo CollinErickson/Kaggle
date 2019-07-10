@@ -60,6 +60,7 @@ Temporary Items
 Earthquake/*.csv
 Earthquake/train/*.csv
 Earthquake/test/*.csv
+Earthquake/*/*.csv
 Earthquake/test.zip
 Earthquake/train.csv.zip
 LeafClassification/images/*.jpg
