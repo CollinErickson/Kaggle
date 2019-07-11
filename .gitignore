@@ -67,3 +67,4 @@ LeafClassification/images/*.jpg
 LeafClassification/*.csv
 DigitRecognizer/*
 ScalarCoupling/data/*
+ScalarCoupling/*.zip
