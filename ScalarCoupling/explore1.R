@@ -5,5 +5,5 @@ dipole_moments %>% summary
 dipole_moments[,2:4] %>% pairs
 dipole_moments[,2:4] %>% cor
 
-magnetic <- read.csv('./ScalarCoupling/data/magnetic_shielding_tensors.csv')
+magnetic <- read.csv('./ScalarCoupling/data/magnetic_shielding_tensors.csv', stringsAsFactors = F)
 magnetic %>% str
