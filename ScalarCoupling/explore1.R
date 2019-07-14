@@ -7,3 +7,13 @@ dipole_moments[,2:4] %>% cor
 
 magnetic <- read.csv('./ScalarCoupling/data/magnetic_shielding_tensors.csv', stringsAsFactors = F)
 magnetic %>% str
+magnetic %>% summary
+magnetic[,2:11] %>% pairs
+magnetic[,2:11] %>% cor
+
+mulliken <- read.csv('./ScalarCoupling/data/mulliken_charges.csv', stringsAsFactors = F)
+mulliken %>% str
+mulliken %>% summary
+mulliken[,2:3] %>% pairs
+mulliken[,2:3] %>% cor
+
