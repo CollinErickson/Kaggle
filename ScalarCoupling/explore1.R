@@ -17,3 +17,7 @@ mulliken %>% summary
 mulliken[,2:3] %>% pairs
 mulliken[,2:3] %>% cor
 
+potential <- read.csv('./ScalarCoupling/data/potential_energy.csv', stringsAsFactors = F)
+potential %>% str
+potential %>% summary
+potential$potential_energy %>% hist
